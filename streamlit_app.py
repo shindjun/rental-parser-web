@@ -27,6 +27,9 @@ if st.button("파싱 & 저장"):
         date_match = re.search(r"설치(?:일)?\s*[:：]?\s*(\d{4}년\s*\d{1,2}월\d{1,2}일)", line)
         date = date_match.group(1) if date_match else ""
 
+        # line에서 날짜 제거 (렌탈일 계산에 방해되지 않도록)
+        line_for_rent = re.sub(r"\d{4}년\s*\d{1,2}월\d{1,2}일", "", line)
+
         # 업체명
         company = line.split("/")[0].strip()
         company = re.sub(r"\d{4}년\s*\d{1,2}월\d{1,2}일", "", company).strip()
@@ -44,15 +47,13 @@ if st.button("파싱 & 저장"):
 
         # 렌탈일수
         # 범위 (예: 10~15일)
-        range_match = re.search(r"(\d+)~(\d+)일", line)
+        range_match = re.search(r"(\d+)~(\d+)일", line_for_rent)
         if range_match:
             rent_days = int(range_match.group(2)) - int(range_match.group(1))
         else:
-            # 단일 숫자+일, 월·일 날짜 제외
-            single_matches = re.findall(
-                r"(?<!\d{4}년\s*\d{1,2}월)(?:렌탈|대여|렌탈:|대여:)?\s*([1-9][0-9]?)일", line
-            )
-            rent_days = int(single_matches[0]) if single_matches else ""
+            # 단일 숫자+일, 월·일 날짜는 이미 제거했으므로 바로 검색 가능
+            single_match = re.search(r"(?:렌탈|대여|렌탈:|대여:)?\s*([1-9][0-9]?)일", line_for_rent)
+            rent_days = int(single_match.group(1)) if single_match else ""
 
         # 지역 (담당자 앞까지만)
         region_match = re.search(r"지역\s*[:：]?\s*(.*?)\s*(?:담당자|$)", line)
