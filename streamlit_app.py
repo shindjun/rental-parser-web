@@ -5,7 +5,6 @@ import os
 
 st.title("렌탈/대여 자동 계산기 (누적 + 삭제)")
 
-# CSV 파일로 누적 저장
 CSV_FILE = "result.csv"
 
 # 기존 데이터 로드
@@ -24,14 +23,14 @@ if st.button("파싱 & 저장"):
     lines = [x.strip() for x in text_input.split("\n\n") if x.strip()]
     rows = []
     for line in lines:
-        # 날짜: 설치/설치일 뒤의 월일만
-        date_match = re.search(r"설치(?:일)?\s*[:：]?\s*(\d{1,2}월\d{1,2}일)", line)
+        # 날짜: 설치/설치일 뒤의 연도 포함 월일
+        date_match = re.search(r"설치(?:일)?\s*[:：]?\s*(\d{4}년\s*\d{1,2}월\d{1,2}일)", line)
         date = date_match.group(1) if date_match else ""
 
         # 업체명
         company = line.split("/")[0].strip()
-        company = re.sub(r"\d{1,2}월\d{1,2}일", "", company).strip()
-        company = re.sub(r"^\s*[-~]\s*", "", company)  # 앞 공백/특수문자 제거
+        company = re.sub(r"\d{4}년\s*\d{1,2}월\d{1,2}일", "", company).strip()
+        company = re.sub(r"^\s*[-~]\s*", "", company)
 
         # 기기타입
         type_ = "부스" if "부스" in line else ("미니" if "미니" in line else "")
@@ -44,12 +43,16 @@ if st.button("파싱 & 저장"):
         quantity = quantity_match.group(1) if quantity_match else ""
 
         # 렌탈일수
-        range_match = re.search(r"([0-9]+)~([0-9]+)일", line)
+        # 범위 (예: 10~15일)
+        range_match = re.search(r"(\d+)~(\d+)일", line)
         if range_match:
             rent_days = int(range_match.group(2)) - int(range_match.group(1))
         else:
-            single_match = re.search(r"(?:렌탈|대여|렌탈:|대여:)?\s*([1-9][0-9]?)일", line)
-            rent_days = int(single_match.group(1)) if single_match else ""
+            # 단일 숫자+일, 월·일 날짜 제외
+            single_matches = re.findall(
+                r"(?<!\d{4}년\s*\d{1,2}월)(?:렌탈|대여|렌탈:|대여:)?\s*([1-9][0-9]?)일", line
+            )
+            rent_days = int(single_matches[0]) if single_matches else ""
 
         # 지역 (담당자 앞까지만)
         region_match = re.search(r"지역\s*[:：]?\s*(.*?)\s*(?:담당자|$)", line)
